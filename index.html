@@ -2,118 +2,18 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Roblox Profile Viewer</title>
-  <style>
-    body {
-      background-color: #0d1117;
-      color: white;
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-    }
-    .container {
-      padding: 20px;
-      max-width: 1000px;
-      margin: auto;
-    }
-    input {
-      padding: 10px;
-      font-size: 1em;
-      width: 300px;
-    }
-    button {
-      padding: 10px;
-      font-size: 1em;
-      margin-left: 10px;
-    }
-    .profile {
-      margin-top: 30px;
-      display: flex;
-      flex-wrap: wrap;
-    }
-    .avatar {
-      margin-right: 20px;
-    }
-    .info {
-      max-width: 600px;
-    }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="container">
     <h1>Roblox Profile Viewer</h1>
-    <input type="text" id="username" placeholder="Enter Roblox username or user ID">
+    <input type="text" id="usernameInput" placeholder="Enter Roblox Username">
     <button onclick="searchUser()">Search</button>
-    <div id="loading">Loading...</div>
-    <div id="result" class="profile" style="display: none;">
-      <div class="avatar">
-        <img id="avatar" src="" alt="Avatar" width="150">
-      </div>
-      <div class="info">
-        <h2 id="name"></h2>
-        <p id="description"></p>
-        <p><strong>Friends:</strong> <span id="friends"></span></p>
-        <p><strong>Followers:</strong> <span id="followers"></span></p>
-        <p><strong>Following:</strong> <span id="following"></span></p>
-      </div>
-    </div>
+    <div id="profile"></div>
+    <div id="error"></div>
   </div>
-
-  <script>
-    async function fetchWithProxy(url, options = {}) {
-      const proxyUrl = 'https://roblox-api-proxy.vercel.app';
-      const response = await fetch(proxyUrl + url, options);
-      if (!response.ok) throw new Error(`Error ${response.status}`);
-      return await response.json();
-    }
-
-    async function searchUser() {
-      document.getElementById('loading').style.display = 'block';
-      document.getElementById('result').style.display = 'none';
-
-      const input = document.getElementById('username').value.trim();
-      if (!input) return;
-
-      let userId = parseInt(input);
-
-      if (isNaN(userId)) {
-        try {
-          const result = await fetchWithProxy(`/v1/usernames/users`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ usernames: [input] })
-          });
-          userId = result.data[0]?.id;
-          if (!userId) throw new Error('Username not found');
-        } catch (e) {
-          alert('Username not found.');
-          document.getElementById('loading').style.display = 'none';
-          return;
-        }
-      }
-
-      try {
-        const userInfo = await fetchWithProxy(`/v1/users/${userId}`);
-        const friends = await fetchWithProxy(`/friends/v1/users/${userId}/friends/count`);
-        const followers = await fetchWithProxy(`/users/followers/count?userId=${userId}`);
-        const following = await fetchWithProxy(`/users/following/count?userId=${userId}`);
-        const avatar = await fetchWithProxy(`/thumbnails/v1/users/avatar-headshot?userIds=${userId}&size=150x150&format=Png&isCircular=false`);
-
-        document.getElementById('name').textContent = userInfo.name;
-        document.getElementById('description').textContent = userInfo.description || 'No description.';
-        document.getElementById('friends').textContent = friends.count;
-        document.getElementById('followers').textContent = followers.count;
-        document.getElementById('following').textContent = following.count;
-        document.getElementById('avatar').src = avatar.data[0]?.imageUrl || 'https://tr.rbxcdn.com/8c4a6705be3f0053c960f71b0d6f5cc9/420/420/AvatarHeadshot/Png';
-
-        document.getElementById('loading').style.display = 'none';
-        document.getElementById('result').style.display = 'flex';
-      } catch (error) {
-        alert('Failed to load profile info.');
-        document.getElementById('loading').style.display = 'none';
-      }
-    }
-  </script>
+  <script src="script.js"></script>
 </body>
 </html>
