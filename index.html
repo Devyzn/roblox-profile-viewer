@@ -61,20 +61,11 @@
   </div>
 
   <script>
-    async function fetchWithProxy(url) {
+    async function fetchWithProxy(url, options = {}) {
       const proxyUrl = 'https://roblox-api-proxy.vercel.app';
-      const response = await fetch(proxyUrl + url);
+      const response = await fetch(proxyUrl + url, options);
       if (!response.ok) throw new Error(`Error ${response.status}`);
       return await response.json();
-    }
-
-    async function getUserId(username) {
-      const data = await fetchWithProxy(`/v1/usernames/users`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ usernames: [username] })
-      });
-      return data.data[0]?.id;
     }
 
     async function searchUser() {
@@ -87,7 +78,6 @@
       let userId = parseInt(input);
 
       if (isNaN(userId)) {
-        // Try to get user ID from username
         try {
           const result = await fetchWithProxy(`/v1/usernames/users`, {
             method: 'POST',
@@ -115,7 +105,7 @@
         document.getElementById('friends').textContent = friends.count;
         document.getElementById('followers').textContent = followers.count;
         document.getElementById('following').textContent = following.count;
-        document.getElementById('avatar').src = avatar.data[0].imageUrl;
+        document.getElementById('avatar').src = avatar.data[0]?.imageUrl || 'https://tr.rbxcdn.com/8c4a6705be3f0053c960f71b0d6f5cc9/420/420/AvatarHeadshot/Png';
 
         document.getElementById('loading').style.display = 'none';
         document.getElementById('result').style.display = 'flex';
