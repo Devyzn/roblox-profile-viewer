@@ -5,50 +5,58 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Roblox Profile Viewer</title>
 <style>
+  /* Dark theme styling */
   body {
-    background-color: #121212;
-    color: #eee;
+    margin: 0; padding: 20px; background-color: #121212; color: #eee;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    margin: 0; padding: 20px;
   }
   input, button {
-    font-size: 1rem;
-    padding: 10px;
-    margin: 10px 0;
-    border-radius: 5px;
-    border: none;
+    font-size: 1rem; padding: 10px; margin: 10px 0; border-radius: 5px; border: none;
   }
   input {
     width: 300px;
   }
   button {
-    background-color: #2c2c2c;
-    color: #eee;
-    cursor: pointer;
+    background-color: #2c2c2c; color: #eee; cursor: pointer;
   }
   button:hover {
     background-color: #444;
   }
   .profile {
-    margin-top: 20px;
-    display: flex;
-    gap: 20px;
-    align-items: center;
+    margin-top: 20px; display: flex; gap: 20px; align-items: flex-start;
   }
   .avatar {
-    border-radius: 50%;
+    border-radius: 50%; width: 150px; height: 150px; object-fit: cover;
   }
   .info {
-    max-width: 600px;
+    max-width: 700px;
+  }
+  h2, h3 {
+    margin: 8px 0;
+  }
+  ul {
+    list-style-type: none; padding-left: 0;
+  }
+  li {
+    margin-bottom: 6px;
+  }
+  a {
+    color: #2a86ff; text-decoration: none;
+  }
+  a:hover {
+    text-decoration: underline;
   }
   .error {
     color: #ff5555;
+  }
+  .loading {
+    font-style: italic;
   }
 </style>
 </head>
 <body>
 
-<h1>Roblox Profile Viewer (Dark Theme)</h1>
+<h1>Roblox Profile Viewer</h1>
 
 <input id="userInput" type="text" placeholder="Enter Roblox username or user ID" />
 <button id="searchBtn">Search</button>
@@ -60,61 +68,66 @@
   const userInput = document.getElementById('userInput');
   const searchBtn = document.getElementById('searchBtn');
 
-  async function fetchUserId(username) {
-    const url = `https://api.roblox.plus/v1/users/get-by-username?username=${encodeURIComponent(username)}`;
-    try {
-      const res = await fetch(url);
-      if (!res.ok) return null;
-      const data = await res.json();
-      return data.id || null;
-    } catch {
-      return null;
-    }
+  // Helper: Check if input is numeric user ID
+  function isUserId(input) {
+    return /^\d+$/.test(input);
   }
 
-  async function fetchUserInfo(userId) {
+  // Get user ID by username (using Roblox Plus API - works well)
+  async function getUserIdFromUsername(username) {
+    const url = `https://api.roblox.plus/v1/users/get-by-username?username=${encodeURIComponent(username)}`;
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.id || null;
+  }
+
+  // Fetch user info (name, description, created)
+  async function getUserInfo(userId) {
     const url = `https://users.roblox.com/v1/users/${userId}`;
     const res = await fetch(url);
     if (!res.ok) return null;
     return res.json();
   }
 
-  async function fetchAvatar(userId) {
+  // Fetch avatar headshot
+  async function getAvatar(userId) {
     const url = `https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${userId}&size=150x150&format=Png&isCircular=true`;
     const res = await fetch(url);
     if (!res.ok) return null;
     const data = await res.json();
-    if (data.data && data.data[0] && data.data[0].imageUrl) {
-      return data.data[0].imageUrl;
-    }
-    return null;
+    return data.data && data.data[0] ? data.data[0].imageUrl : null;
   }
 
-  async function fetchFriendsCount(userId) {
+  // Fetch friends count
+  async function getFriendsCount(userId) {
     const url = `https://friends.roblox.com/v1/users/${userId}/friends/count`;
     const res = await fetch(url);
     if (!res.ok) return null;
     const data = await res.json();
-    return data.count || 0;
+    return data.count;
   }
 
-  async function fetchFollowersCount(userId) {
+  // Fetch followers count
+  async function getFollowersCount(userId) {
     const url = `https://friends.roblox.com/v1/users/${userId}/followers/count`;
     const res = await fetch(url);
     if (!res.ok) return null;
     const data = await res.json();
-    return data.count || 0;
+    return data.count;
   }
 
-  async function fetchFollowingCount(userId) {
+  // Fetch following count
+  async function getFollowingCount(userId) {
     const url = `https://friends.roblox.com/v1/users/${userId}/followings/count`;
     const res = await fetch(url);
     if (!res.ok) return null;
     const data = await res.json();
-    return data.count || 0;
+    return data.count;
   }
 
-  async function fetchFavorites(userId) {
+  // Fetch favorite games (limit 10)
+  async function getFavoriteGames(userId) {
     const url = `https://favorites.roblox.com/v1/users/${userId}/games/favorites?limit=10`;
     const res = await fetch(url);
     if (!res.ok) return [];
@@ -122,7 +135,8 @@
     return data.data || [];
   }
 
-  async function fetchCreatedGames(userId) {
+  // Fetch created games (limit 10)
+  async function getCreatedGames(userId) {
     const url = `https://games.roblox.com/v2/users/${userId}/games?limit=10`;
     const res = await fetch(url);
     if (!res.ok) return [];
@@ -130,63 +144,91 @@
     return data.data || [];
   }
 
+  // Fetch place visits for a game (placeId)
+  async function getPlaceVisits(placeId) {
+    const url = `https://games.roblox.com/v1/games/multiget-place-details?placeIds=${placeId}`;
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data.data && data.data[0]) {
+      return data.data[0].visits || 0;
+    }
+    return 0;
+  }
+
   async function searchProfile() {
-    resultDiv.innerHTML = "Loading...";
+    resultDiv.innerHTML = '<p class="loading">Loading...</p>';
     let input = userInput.value.trim();
     if (!input) {
       resultDiv.innerHTML = `<p class="error">Please enter a username or user ID.</p>`;
       return;
     }
 
-    let userId = null;
-    if (/^\d+$/.test(input)) {
-      // input is numeric user id
+    let userId;
+    if (isUserId(input)) {
       userId = input;
     } else {
-      // try to get user ID from username
-      userId = await fetchUserId(input);
+      userId = await getUserIdFromUsername(input);
       if (!userId) {
         resultDiv.innerHTML = `<p class="error">User not found.</p>`;
         return;
       }
     }
 
-    // Fetch user info
-    const userInfo = await fetchUserInfo(userId);
+    // Fetch all data concurrently
+    const [
+      userInfo,
+      avatarUrl,
+      friendsCount,
+      followersCount,
+      followingCount,
+      favorites,
+      createdGames,
+    ] = await Promise.all([
+      getUserInfo(userId),
+      getAvatar(userId),
+      getFriendsCount(userId),
+      getFollowersCount(userId),
+      getFollowingCount(userId),
+      getFavoriteGames(userId),
+      getCreatedGames(userId),
+    ]);
+
     if (!userInfo) {
-      resultDiv.innerHTML = `<p class="error">Failed to fetch user info.</p>`;
+      resultDiv.innerHTML = `<p class="error">Failed to load user info.</p>`;
       return;
     }
 
-    // Fetch avatar
-    const avatarUrl = await fetchAvatar(userId) || 'https://tr.rbxcdn.com/8c4a6705be3f0053c960f71b0d6f5cc9/420/420/AvatarHeadshot/Png';
+    // For each created game, fetch visits in parallel
+    const gamesWithVisits = await Promise.all(createdGames.map(async (game) => {
+      const visits = await getPlaceVisits(game.rootPlaceId);
+      return {...game, visits};
+    }));
 
-    // Fetch counts
-    const [friendsCount, followersCount, followingCount, favorites, createdGames] = await Promise.all([
-      fetchFriendsCount(userId),
-      fetchFollowersCount(userId),
-      fetchFollowingCount(userId),
-      fetchFavorites(userId),
-      fetchCreatedGames(userId)
-    ]);
-
-    // Build profile HTML
+    // Build output HTML
     resultDiv.innerHTML = `
       <div class="profile">
-        <img src="${avatarUrl}" alt="Avatar" class="avatar" width="150" height="150" />
+        <img src="${avatarUrl || 'https://tr.rbxcdn.com/8c4a6705be3f0053c960f71b0d6f5cc9/420/420/AvatarHeadshot/Png'}" alt="Avatar" class="avatar" />
         <div class="info">
           <h2>${userInfo.name}</h2>
-          <p><strong>Description:</strong> ${userInfo.description || 'No description.'}</p>
-          <p><strong>Friends:</strong> ${friendsCount}</p>
-          <p><strong>Followers:</strong> ${followersCount}</p>
-          <p><strong>Following:</strong> ${followingCount}</p>
-          <h3>Favorites</h3>
+          <p><strong>Description:</strong> ${userInfo.description || 'No description'}</p>
+          <p><strong>Created:</strong> ${new Date(userInfo.created).toLocaleDateString()}</p>
+          <p><strong>Friends:</strong> ${friendsCount ?? 'N/A'}</p>
+          <p><strong>Followers:</strong> ${followersCount ?? 'N/A'}</p>
+          <p><strong>Following:</strong> ${followingCount ?? 'N/A'}</p>
+
+          <h3>Favorite Games</h3>
           <ul>
-            ${favorites.map(game => `<li><a href="https://www.roblox.com/games/${game.rootPlaceId}" target="_blank">${game.name}</a></li>`).join('') || '<li>None</li>'}
+            ${favorites.length > 0 ? favorites.map(game =>
+              `<li><a href="https://www.roblox.com/games/${game.rootPlaceId}" target="_blank" rel="noopener noreferrer">${game.name}</a></li>`
+            ).join('') : '<li>No favorites found</li>'}
           </ul>
+
           <h3>Created Games</h3>
           <ul>
-            ${createdGames.map(game => `<li><a href="https://www.roblox.com/games/${game.rootPlaceId}" target="_blank">${game.name}</a></li>`).join('') || '<li>None</li>'}
+            ${gamesWithVisits.length > 0 ? gamesWithVisits.map(game =>
+              `<li><a href="https://www.roblox.com/games/${game.rootPlaceId}" target="_blank" rel="noopener noreferrer">${game.name}</a> - Visits: ${game.visits.toLocaleString()}</li>`
+            ).join('') : '<li>No created games found</li>'}
           </ul>
         </div>
       </div>
@@ -200,4 +242,4 @@
 </script>
 
 </body>
-</html>
+</html
